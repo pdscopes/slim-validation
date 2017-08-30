@@ -1,4 +1,4 @@
-# slim-valiadation
+# slim-validation
 Abstract Slim middleware to allow request simple validation.
 
 Simply extend the class for each route you want to validate, write the
@@ -8,7 +8,7 @@ rules, and add the middleware to the route:
 // Request class
 namespace Requests;
 
-class FooRequest extends \MadeSimple\Slim\Middleware\Validation
+class FooPostRequest extends \MadeSimple\Slim\Middleware\Validation
 {
     /**
      * @return array Rule set for the request path.
@@ -42,14 +42,12 @@ class FooRequest extends \MadeSimple\Slim\Middleware\Validation
 ```php
 <?php
 // Routes
-use Controllers;
-use Requests;
 
-$app->post('/route/path/foo', Controllers\Foo::class . ':foo')
-    ->add(Requests\FooRequest::class);
+$app->post('/route/path/foo', \Controllers\Foo::class . ':post')
+    ->add(\Requests\FooPostRequest::class);
 ```
 
 If the request fails validation then a 422 response is automatically returned.
 
 ## Official Documentation
-Simple Validator: https://github.com/cangelis/simple-validator
+Simple Validator: https://github.com/pdscopes/php-form-validator

@@ -3,7 +3,7 @@
 namespace MadeSimple\Slim\Middleware;
 
 use Psr\Container\ContainerInterface;
-use SimpleValidator\Validator;
+use MadeSimple\Validator\Validator;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
@@ -39,24 +39,28 @@ abstract class Validation
      */
     public function __invoke(Request $request, Response $response, $next)
     {
+        $validator = new Validator();
+
         // Validate the request
-        $routeArgs = $request->getAttribute('route')->getArguments();
+        $routeInfo = $request->getAttribute('routeInfo');
+        $routeArgs = $routeInfo[2];
 
-        $result = Validator::validate($routeArgs, $this->getPathRules());
+        $validator->validate($routeArgs, $this->getPathRules());
         // If path validation failed
-        if (!$result->isSuccess()) {
-            return $this->invalidPathResponse($response, $result->getErrors());
+        if ($validator->hasErrors()) {
+            return $this->invalidPathResponse($response);
         }
 
-        $result = Validator::validate($request->getQueryParams(), $this->getQueryParameterRules($routeArgs));
+        $validator->validate($request->getQueryParams(), $this->getQueryParameterRules($routeArgs));
         // If query parameter validation failed
-        if (!$result->isSuccess()) {
-            return $this->invalidBodyResponse($response, $result->getErrors());
+        if ($validator->hasErrors()) {
+            return $this->invalidBodyResponse($response, $validator->getProcessedErrors());
         }
-        $result = Validator::validate($request->getParsedBody(), $this->getParsedBodyRules($routeArgs));
+
+        $validator->validate($request->getParsedBody(), $this->getParsedBodyRules($routeArgs));
         // If parsed body validation failed
-        if (!$result->isSuccess()) {
-            return $this->invalidBodyResponse($response, $result->getErrors());
+        if ($validator->hasErrors()) {
+            return $this->invalidBodyResponse($response, $validator->getProcessedErrors());
         }
 
         return $next($request, $response);
@@ -66,11 +70,10 @@ abstract class Validation
      * 404 status code with a JSON encoded body of the errors.
      *
      * @param Response  $response
-     * @param array     $errors
      *
      * @return Response
      */
-    protected function invalidPathResponse(Response $response, array $errors)
+    protected function invalidPathResponse(Response $response)
     {
         return $response
             ->withStatus(404)
@@ -89,7 +92,7 @@ abstract class Validation
     {
         return $response
             ->withStatus(422)
-            ->withJson(['code' => 422, 'errors' => $errors]);
+            ->withJson(['code' => 422] + $errors);
     }
 
     /**
