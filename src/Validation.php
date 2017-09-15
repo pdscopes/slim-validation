@@ -39,7 +39,7 @@ abstract class Validation
      */
     public function __invoke(Request $request, Response $response, $next)
     {
-        $validator = new Validator();
+        $validator = $this->getValidator();
 
         // Validate the request
         $routeInfo = $request->getAttribute('routeInfo');
@@ -64,6 +64,14 @@ abstract class Validation
         }
 
         return $next($request, $response);
+    }
+
+    /**
+     * @return Validator
+     */
+    protected function getValidator()
+    {
+        return $this->ci->has('validator') ? $this->ci['validator'] : new Validator();
     }
 
     /**
