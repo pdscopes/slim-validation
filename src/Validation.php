@@ -4,6 +4,7 @@ namespace MadeSimple\Slim\Middleware;
 
 use Psr\Container\ContainerInterface;
 use MadeSimple\Validator\Validator;
+use Slim\Exception\NotFoundException;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
@@ -34,7 +35,8 @@ abstract class Validation
      * @param Request  $request
      * @param Response $response
      * @param \Closure $next
-     *
+     * @throws NotFoundException
+     * @throws InvalidRequestException
      * @return Response
      */
     public function __invoke(Request $request, Response $response, $next)
@@ -48,19 +50,28 @@ abstract class Validation
         $validator->validate($routeArgs, $this->getPathRules());
         // If path validation failed
         if ($validator->hasErrors()) {
-            return $this->invalidPathResponse($response);
+            if (!$this->ci->has('notFoundHandler')) {
+                throw new NotFoundException($request, $response);
+            }
+            return $this->ci['notFoundHandler']($request, $response);
         }
 
         $validator->validate($request->getQueryParams(), $this->getQueryParameterRules($routeArgs));
         // If query parameter validation failed
         if ($validator->hasErrors()) {
-            return $this->invalidBodyResponse($response, $validator->getProcessedErrors());
+            if (!$this->ci->has('invalidRequestHandler')) {
+                throw new InvalidRequestException($request, $response, $validator->getProcessedErrors());
+            }
+            return $this->ci['invalidRequestHandler']($request, $response, $validator->getProcessedErrors());
         }
 
         $validator->validate($request->getParsedBody(), $this->getParsedBodyRules($routeArgs));
         // If parsed body validation failed
         if ($validator->hasErrors()) {
-            return $this->invalidBodyResponse($response, $validator->getProcessedErrors());
+            if (!$this->ci->has('invalidRequestHandler')) {
+                throw new InvalidRequestException($request, $response, $validator->getProcessedErrors());
+            }
+            return $this->ci['invalidRequestHandler']($request, $response, $validator->getProcessedErrors());
         }
 
         return $next($request, $response);
@@ -72,35 +83,6 @@ abstract class Validation
     protected function getValidator()
     {
         return $this->ci->has('validator') ? $this->ci['validator'] : new Validator();
-    }
-
-    /**
-     * 404 status code with a JSON encoded body of the errors.
-     *
-     * @param Response  $response
-     *
-     * @return Response
-     */
-    protected function invalidPathResponse(Response $response)
-    {
-        return $response
-            ->withStatus(404)
-            ->withJson(['code' => 404, 'message' => 'Not Found']);
-    }
-
-    /**
-     * 422 status code with a JSON encoded body of the errors.
-     *
-     * @param Response  $response
-     * @param array     $errors
-     *
-     * @return Response
-     */
-    protected function invalidBodyResponse(Response $response, array $errors)
-    {
-        return $response
-            ->withStatus(422)
-            ->withJson(['code' => 422] + $errors);
     }
 
     /**
