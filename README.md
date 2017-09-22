@@ -47,7 +47,9 @@ $app->post('/route/path/foo', \Controllers\Foo::class . ':post')
     ->add(\Requests\FooPostRequest::class);
 ```
 
-If the request fails validation then a 422 response is automatically returned.
+
+If the request fails validation of the path rules then check the container for a `notFoundHandler` otherwise throw `Slim\Exception\NotFoundException`. If there is a handler then `notFoundHandler($request, $response)` is called.
+If the request fails validation of either query parameters or parsed body rules then check the container for an `invalidRequestHandler` otherwise throw `MadeSimple\Slim\Middleware\InvalidRequestException`. If there is a handler then `invalidRequestHandler($request, $response, $errors)` is called.
 
 ## Official Documentation
 Simple Validator: https://github.com/pdscopes/php-form-validator
