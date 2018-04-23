@@ -78,6 +78,42 @@ abstract class Validation
     }
 
     /**
+     * @param \Slim\Http\Request  $request
+     * @param \Slim\Http\Response $response
+     * @return \MadeSimple\Validator\Validator
+     * @throws \MadeSimple\Slim\Middleware\InvalidRequestException
+     * @throws \Slim\Exception\NotFoundException
+     */
+    public function validate(Request $request, Response $response)
+    {
+        // Extract the route arguments
+        $routeInfo = $request->getAttribute('routeInfo');
+        $routeArgs = $routeInfo[2];
+
+        $validator = $this->getValidator();
+
+        // Validate the request path
+        $validator->validate($routeArgs, $this->getPathRules());
+        if ($validator->hasErrors()) {
+            throw new NotFoundException($request, $response);
+        }
+
+        // Validate the request query parameters
+        $validator->validate($request->getQueryParams(), $this->getQueryParameterRules($routeArgs));
+        if ($validator->hasErrors()) {
+            throw new InvalidRequestException($request, $response, $validator->getProcessedErrors());
+        }
+
+        // Validate the request parsed body
+        $validator->validate($request->getParsedBody(), $this->getParsedBodyRules($routeArgs));
+        if ($validator->hasErrors()) {
+            throw new InvalidRequestException($request, $response, $validator->getProcessedErrors());
+        }
+
+        return $validator;
+    }
+
+    /**
      * @return Validator
      */
     protected function getValidator()

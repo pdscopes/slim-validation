@@ -8,17 +8,12 @@ use Slim\Container;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
-class IntegrationTest extends TestCase
+class IntegrationFunctionTest extends TestCase
 {
     /**
      * @var ContainerInterface
      */
     private $ci;
-
-    /**
-     * @var callable
-     */
-    private $next;
 
     /**
      * @var Request|\PHPUnit_Framework_MockObject_MockObject
@@ -34,19 +29,6 @@ class IntegrationTest extends TestCase
     {
         parent::setUp();
         $this->ci = new Container();
-        $this->ci['notFoundHandler'] = function () {
-            return function ($request, $response) {
-                return $response->withStatus(404);
-            };
-        };
-        $this->ci['invalidRequestHandler'] = function () {
-            return function ($request, $response) {
-                return $response->withStatus(422);
-            };
-        };
-        $this->next = function ($request, $response) {
-            return $response;
-        };
         $this->request  = $this->createMock(Request::class);
         $this->response = new Response();
     }
@@ -58,18 +40,19 @@ class IntegrationTest extends TestCase
         $this->request->method('getAttribute')->willReturn([2 => ['argument' => 4]]);
 
         $validation = new PathRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
+        $validator  = $validation->validate($this->request, new Response());
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertFalse($validator->hasErrors());
     }
+    /**
+     * @expectedException \Slim\Exception\NotFoundException
+     */
     public function testPathRulesFailure()
     {
         $this->request->method('getAttribute')->willReturn([2 => ['argument' => 'value']]);
 
         $validation = new PathRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
-
-        $this->assertEquals(404, $response->getStatusCode());
+        $validation->validate($this->request, new Response());
     }
 
     public function testQueryRulesSuccess()
@@ -78,19 +61,20 @@ class IntegrationTest extends TestCase
         $this->request->method('getQueryParams')->willReturn(['param' => 4]);
 
         $validation = new QueryParameterRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
+        $validator  = $validation->validate($this->request, new Response());
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertFalse($validator->hasErrors());
     }
+    /**
+     * @expectedException \MadeSimple\Slim\Middleware\InvalidRequestException
+     */
     public function testQueryRulesFailure()
     {
         $this->request->method('getAttribute')->willReturn([2 => ['minimum' => 5]]);
         $this->request->method('getQueryParams')->willReturn(['param' => 4]);
 
         $validation = new QueryParameterRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
-
-        $this->assertEquals(422, $response->getStatusCode());
+        $validation->validate($this->request, new Response());
     }
 
     public function testBodyRulesSuccess()
@@ -100,10 +84,13 @@ class IntegrationTest extends TestCase
         $this->request->method('getParsedBody')->willReturn(['field' => 4]);
 
         $validation = new ParsedBodyRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
+        $validator  = $validation->validate($this->request, new Response());
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertFalse($validator->hasErrors());
     }
+    /**
+     * @expectedException \MadeSimple\Slim\Middleware\InvalidRequestException
+     */
     public function testBodyRulesFailure()
     {
         $this->request->method('getAttribute')->willReturn([2 => ['minimum' => 5]]);
@@ -111,8 +98,6 @@ class IntegrationTest extends TestCase
         $this->request->method('getParsedBody')->willReturn(['field' => 4]);
 
         $validation = new ParsedBodyRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
-
-        $this->assertEquals(422, $response->getStatusCode());
+        $validation->validate($this->request, new Response());
     }
 }
