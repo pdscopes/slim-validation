@@ -6,17 +6,17 @@ use MadeSimple\Slim\Middleware\Validation;
 
 class QueryParameterRulesValidation extends Validation
 {
-    protected  function getPathRules()
+    protected  function getPathRules(): array
     {
         return [];
     }
-    protected  function getQueryParameterRules(array $routeArguments)
+    protected  function getQueryParameterRules(array $routeArguments): array
     {
         return [
-            'param' => 'is:int|min:' . $routeArguments['minimum']
+            'param' => 'is:numeric|min:' . $routeArguments['minimum']
         ];
     }
-    protected  function getParsedBodyRules(array $routeArguments)
+    protected  function getParsedBodyRules(array $routeArguments): array
     {
         return [];
     }

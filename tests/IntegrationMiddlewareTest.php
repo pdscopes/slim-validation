@@ -2,117 +2,94 @@
 
 namespace MadeSimple\Slim\Middleware\Tests;
 
+use MadeSimple\Slim\Middleware\HttpUnprocessableEntityException;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Psr\Container\ContainerInterface;
-use Slim\Container;
-use Slim\Http\Request;
-use Slim\Http\Response;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use Slim\Exception\HttpNotFoundException;
+use Slim\Factory\AppFactory;
+use Slim\Psr7\Factory\ServerRequestFactory;
 
 class IntegrationMiddlewareTest extends TestCase
 {
     /**
-     * @var ContainerInterface
+     * @var \Slim\App
      */
-    private $ci;
+    private $app;
 
-    /**
-     * @var callable
-     */
-    private $next;
-
-    /**
-     * @var Request|\PHPUnit_Framework_MockObject_MockObject
-     */
-    private $request;
-
-    /**
-     * @var Response
-     */
-    private $response;
-
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
-        $this->ci = new Container();
-        $this->ci['notFoundHandler'] = function () {
-            return function ($request, $response) {
-                return $response->withStatus(404);
-            };
-        };
-        $this->ci['invalidRequestHandler'] = function () {
-            return function ($request, $response) {
-                return $response->withStatus(422);
-            };
-        };
-        $this->next = function ($request, $response) {
-            return $response;
-        };
-        $this->request  = $this->createMock(Request::class);
-        $this->response = new Response();
+
+        // Set up the application
+        $this->app = AppFactory::create(null, new TestContainer());
+        $this->app->get('/{minimum}/{argument}', function (ServerRequestInterface $request, ResponseInterface $response) {
+            $response->getBody()->write('success');
+            return $response->withStatus(200);
+        });
     }
-
-
 
     public function testPathRulesSuccess()
     {
-        $this->request->method('getAttribute')->willReturn([2 => ['argument' => 4]]);
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/2/4');
 
-        $validation = new PathRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
+        $this->app->add(new PathRulesValidation($this->app->getContainer()));
+        $this->app->addRoutingMiddleware();
+        $response = $this->app->handle($request);
 
         $this->assertEquals(200, $response->getStatusCode());
     }
     public function testPathRulesFailure()
     {
-        $this->request->method('getAttribute')->willReturn([2 => ['argument' => 'value']]);
+        $this->expectException(HttpNotFoundException::class);
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/2/abc');
 
-        $validation = new PathRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
-
-        $this->assertEquals(404, $response->getStatusCode());
+        $this->app->add(new PathRulesValidation($this->app->getContainer()));
+        $this->app->addRoutingMiddleware();
+        $this->app->handle($request);
     }
 
     public function testQueryRulesSuccess()
     {
-        $this->request->method('getAttribute')->willReturn([2 => ['minimum' => 2]]);
-        $this->request->method('getQueryParams')->willReturn(['param' => 4]);
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/2/4?param=2');
 
-        $validation = new QueryParameterRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
+        $this->app->add(new QueryParameterRulesValidation($this->app->getContainer()));
+        $this->app->addRoutingMiddleware();
+        $response = $this->app->handle($request);
 
         $this->assertEquals(200, $response->getStatusCode());
     }
     public function testQueryRulesFailure()
     {
-        $this->request->method('getAttribute')->willReturn([2 => ['minimum' => 5]]);
-        $this->request->method('getQueryParams')->willReturn(['param' => 4]);
+        $this->expectException(HttpUnprocessableEntityException::class);
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/5/4?param=4');
 
-        $validation = new QueryParameterRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
-
-        $this->assertEquals(422, $response->getStatusCode());
+        $this->app->add(new QueryParameterRulesValidation($this->app->getContainer()));
+        $this->app->addRoutingMiddleware();
+        $this->app->handle($request);
     }
 
     public function testBodyRulesSuccess()
     {
-        $this->request->method('getAttribute')->willReturn([2 => ['minimum' => 2]]);
-        $this->request->method('getQueryParams')->willReturn([]);
-        $this->request->method('getParsedBody')->willReturn(['field' => 4]);
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/2/4')
+            ->withParsedBody(['field' => 4]);
 
-        $validation = new ParsedBodyRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
+        $this->app->add(new ParsedBodyRulesValidation($this->app->getContainer()));
+        $this->app->addRoutingMiddleware();
+        $response = $this->app->handle($request);
 
         $this->assertEquals(200, $response->getStatusCode());
     }
     public function testBodyRulesFailure()
     {
-        $this->request->method('getAttribute')->willReturn([2 => ['minimum' => 5]]);
-        $this->request->method('getQueryParams')->willReturn([]);
-        $this->request->method('getParsedBody')->willReturn(['field' => 4]);
+        $this->expectException(HttpUnprocessableEntityException::class);
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/5/4')
+            ->withParsedBody(['field' => 4]);
 
-        $validation = new ParsedBodyRulesValidation($this->ci);
-        $response   = $validation($this->request, new Response(), $this->next);
-
-        $this->assertEquals(422, $response->getStatusCode());
+        $this->app->add(new ParsedBodyRulesValidation($this->app->getContainer()));
+        $this->app->addRoutingMiddleware();
+        $this->app->handle($request);
     }
 }

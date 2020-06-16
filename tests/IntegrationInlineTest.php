@@ -3,15 +3,14 @@
 namespace MadeSimple\Slim\Middleware\Tests;
 
 use MadeSimple\Slim\Middleware\HttpUnprocessableEntityException;
-use MadeSimple\Slim\Middleware\Validation;
+use MadeSimple\Slim\Middleware\InlineValidation;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Psr7\Factory\ServerRequestFactory;
 
-class IntegrationFunctionTest extends TestCase
+class IntegrationInlineTest extends TestCase
 {
     /**
      * @var ContainerInterface
@@ -25,14 +24,13 @@ class IntegrationFunctionTest extends TestCase
     }
 
     /**
-     * @param string $className
      * @param array $methods
-     * @return Validation|MockObject
+     * @return InlineValidation|MockObject
      */
-    protected function stubValidation(string $className, array $methods = [])
+    protected function stubValidation(array $methods = [])
     {
         return $this->getMockForAbstractClass(
-            $className,
+            InlineValidation::class,
             [$this->ci],
             '',
             true,
@@ -44,111 +42,101 @@ class IntegrationFunctionTest extends TestCase
 
     /**
      * @throws HttpNotFoundException
-     * @throws HttpUnprocessableEntityException
      */
     public function testPathRulesSuccess()
     {
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/');
-        $validation = $this->stubValidation(PathRulesValidation::class, ['getRouteArguments']);
+        $validation = $this->stubValidation(['getRouteArguments']);
         $validation
             ->expects($this->once())
             ->method('getRouteArguments')
             ->with($request)
             ->willReturn(['argument' => 4]);
 
-        $validator = $validation->validate($request);
-        $this->assertFalse($validator->hasErrors());
+        $validation->validatePath($request, [
+            'argument' => 'is:numeric',
+        ]);
+        $this->assertFalse($validation->getValidator()->hasErrors());
     }
 
     /**
      * @throws HttpNotFoundException
-     * @throws HttpUnprocessableEntityException
      */
     public function testPathRulesFailure()
     {
         $this->expectException(HttpNotFoundException::class);
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/');
-        $validation = $this->stubValidation(PathRulesValidation::class, ['getRouteArguments']);
+        $validation = $this->stubValidation(['getRouteArguments']);
         $validation
             ->expects($this->once())
             ->method('getRouteArguments')
             ->with($request)
             ->willReturn(['argument' => 'value']);
 
-        $validation->validate($request);
+        $validation->validatePath($request, [
+            'argument' => 'is:numeric',
+        ]);
     }
 
     /**
-     * @throws HttpNotFoundException
      * @throws HttpUnprocessableEntityException
      */
     public function testQueryRulesSuccess()
     {
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/?param=4');
-        $validation = $this->stubValidation(QueryParameterRulesValidation::class, ['getRouteArguments']);
-        $validation
-            ->expects($this->once())
-            ->method('getRouteArguments')
-            ->with($request)
-            ->willReturn(['minimum' => 2]);
+        $routeArguments = ['minimum' => 2];
+        $validation = $this->stubValidation();
 
-        $validator  = $validation->validate($request);
-        $this->assertFalse($validator->hasErrors());
+        $validation->validateQuery($request, [
+            'param' => 'is:numeric|min:' . $routeArguments['minimum']
+        ]);
+        $this->assertFalse($validation->getValidator()->hasErrors());
     }
 
     /**
-     * @throws HttpNotFoundException
      * @throws HttpUnprocessableEntityException
      */
     public function testQueryRulesFailure()
     {
         $this->expectException(HttpUnprocessableEntityException::class);
+        $routeArguments = ['minimum' => 5];
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/?param=4');
-        $validation = $this->stubValidation(QueryParameterRulesValidation::class, ['getRouteArguments']);
-        $validation
-            ->expects($this->once())
-            ->method('getRouteArguments')
-            ->with($request)
-            ->willReturn(['minimum' => 5]);
+        $validation = $this->stubValidation();
 
-        $validation->validate($request);
+        $validation->validateQuery($request, [
+            'param' => 'is:numeric|min:' . $routeArguments['minimum']
+        ]);
     }
 
     /**
-     * @throws HttpNotFoundException
      * @throws HttpUnprocessableEntityException
      */
     public function testBodyRulesSuccess()
     {
+        $routeArguments = ['minimum' => 2];
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/')
             ->withParsedBody(['field' => 4]);
-        $validation = $this->stubValidation(ParsedBodyRulesValidation::class, ['getRouteArguments']);
-        $validation
-            ->expects($this->once())
-            ->method('getRouteArguments')
-            ->with($request)
-            ->willReturn(['minimum' => 2]);
+        $validation = $this->stubValidation();
 
-        $validator  = $validation->validate($request);
-        $this->assertFalse($validator->hasErrors());
+        $validation->validateParsedBody($request, [
+            'field' => 'is:int|min:' . $routeArguments['minimum']
+        ]);
+        $this->assertFalse($validation->getValidator()->hasErrors());
     }
 
     /**
-     * @throws HttpNotFoundException
      * @throws HttpUnprocessableEntityException
      */
     public function testBodyRulesFailure()
     {
         $this->expectException(HttpUnprocessableEntityException::class);
+        $routeArguments = ['minimum' => 5];
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/')
             ->withParsedBody(['field' => 4]);
-        $validation = $this->stubValidation(ParsedBodyRulesValidation::class, ['getRouteArguments']);
-        $validation
-            ->expects($this->once())
-            ->method('getRouteArguments')
-            ->with($request)
-            ->willReturn(['minimum' => 5]);
+        $validation = $this->stubValidation();
 
-        $validation->validate($request);
+        $validation->validateParsedBody($request, [
+            'field' => 'is:int|min:' . $routeArguments['minimum']
+        ]);
     }
 }

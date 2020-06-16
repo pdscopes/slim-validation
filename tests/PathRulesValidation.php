@@ -6,17 +6,17 @@ use MadeSimple\Slim\Middleware\Validation;
 
 class PathRulesValidation extends Validation
 {
-    protected  function getPathRules()
+    protected  function getPathRules(): array
     {
         return [
-            'argument' => 'is:int',
+            'argument' => 'is:numeric',
         ];
     }
-    protected  function getQueryParameterRules(array $routeArguments)
+    protected  function getQueryParameterRules(array $routeArguments): array
     {
         return [];
     }
-    protected  function getParsedBodyRules(array $routeArguments)
+    protected  function getParsedBodyRules(array $routeArguments): array
     {
         return [];
     }
