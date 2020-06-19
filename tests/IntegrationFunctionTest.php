@@ -87,7 +87,7 @@ class IntegrationFunctionTest extends TestCase
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/?param=4');
         $validation = $this->stubValidation(QueryParameterRulesValidation::class, ['getRouteArguments']);
         $validation
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('getRouteArguments')
             ->with($request)
             ->willReturn(['minimum' => 2]);
@@ -105,13 +105,8 @@ class IntegrationFunctionTest extends TestCase
         $this->expectException(HttpUnprocessableEntityException::class);
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/?param=4');
         $validation = $this->stubValidation(QueryParameterRulesValidation::class, ['getRouteArguments']);
-        $validation
-            ->expects($this->once())
-            ->method('getRouteArguments')
-            ->with($request)
-            ->willReturn(['minimum' => 5]);
 
-        $validation->validate($request);
+        $validation->validate($request->withAttribute('minimum', 5));
     }
 
     /**
@@ -124,7 +119,7 @@ class IntegrationFunctionTest extends TestCase
             ->withParsedBody(['field' => 4]);
         $validation = $this->stubValidation(ParsedBodyRulesValidation::class, ['getRouteArguments']);
         $validation
-            ->expects($this->once())
+            ->expects($this->exactly(2))
             ->method('getRouteArguments')
             ->with($request)
             ->willReturn(['minimum' => 2]);
@@ -143,12 +138,7 @@ class IntegrationFunctionTest extends TestCase
         $request    = (new ServerRequestFactory())->createServerRequest('POST', '/')
             ->withParsedBody(['field' => 4]);
         $validation = $this->stubValidation(ParsedBodyRulesValidation::class, ['getRouteArguments']);
-        $validation
-            ->expects($this->once())
-            ->method('getRouteArguments')
-            ->with($request)
-            ->willReturn(['minimum' => 5]);
 
-        $validation->validate($request);
+        $validation->validate($request->withAttribute('minimum', 5));
     }
 }

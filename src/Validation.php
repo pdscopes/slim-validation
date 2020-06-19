@@ -81,13 +81,13 @@ abstract class Validation implements MiddlewareInterface
         }
 
         // Validate the request query parameters
-        $validator->validate($request->getQueryParams(), $this->getQueryParameterRules($routeArguments));
+        $validator->validate($request->getQueryParams(), $this->getQueryParameterRules($request));
         if ($validator->hasErrors()) {
             throw new HttpUnprocessableEntityException($request, $validator->getProcessedErrors());
         }
 
         // Validate the request parsed body
-        $validator->validate($request->getParsedBody(), $this->getParsedBodyRules($routeArguments));
+        $validator->validate($request->getParsedBody(), $this->getParsedBodyRules($request));
         if ($validator->hasErrors()) {
             throw new HttpUnprocessableEntityException($request, $validator->getProcessedErrors());
         }
@@ -120,16 +120,16 @@ abstract class Validation implements MiddlewareInterface
     protected abstract function getPathRules(): array;
 
     /**
-     * @param array $routeArguments Route arguments
+     * @param ServerRequestInterface $request
      *
      * @return array Rule set for the query parameters.
      */
-    protected abstract function getQueryParameterRules(array $routeArguments): array;
+    protected abstract function getQueryParameterRules(ServerRequestInterface $request): array;
 
     /**
-     * @param array $routeArguments Route arguments
+     * @param ServerRequestInterface $request
      *
      * @return array Rule set for the parsed body.
      */
-    protected abstract function getParsedBodyRules(array $routeArguments): array;
+    protected abstract function getParsedBodyRules(ServerRequestInterface $request): array;
 }

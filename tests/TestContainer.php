@@ -2,9 +2,6 @@
 
 namespace MadeSimple\Slim\Middleware\Tests;
 
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
-
 class TestContainer implements \Psr\Container\ContainerInterface
 {
     /**

@@ -3,6 +3,7 @@
 namespace MadeSimple\Slim\Middleware\Tests;
 
 use MadeSimple\Slim\Middleware\Validation;
+use Psr\Http\Message\ServerRequestInterface as Request;
 
 class PathRulesValidation extends Validation
 {
@@ -12,11 +13,11 @@ class PathRulesValidation extends Validation
             'argument' => 'is:numeric',
         ];
     }
-    protected  function getQueryParameterRules(array $routeArguments): array
+    protected  function getQueryParameterRules(Request $request): array
     {
         return [];
     }
-    protected  function getParsedBodyRules(array $routeArguments): array
+    protected  function getParsedBodyRules(Request $request): array
     {
         return [];
     }

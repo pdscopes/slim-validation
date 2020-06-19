@@ -3,6 +3,7 @@
 namespace MadeSimple\Slim\Middleware\Tests;
 
 use MadeSimple\Slim\Middleware\Validation;
+use Psr\Http\Message\ServerRequestInterface as Request;
 
 class ParsedBodyRulesValidation extends Validation
 {
@@ -10,14 +11,16 @@ class ParsedBodyRulesValidation extends Validation
     {
         return [];
     }
-    protected  function getQueryParameterRules(array $routeArguments): array
+    protected  function getQueryParameterRules(Request $request): array
     {
         return [];
     }
-    protected  function getParsedBodyRules(array $routeArguments): array
+    protected  function getParsedBodyRules(Request $request): array
     {
         return [
-            'field' => 'is:int|min:' . $routeArguments['minimum']
+            // If using validation as a function then the request has the minimum attribute
+            // If using validation as middleware then the route arguments need to be extracted from the routing results
+            'field' => 'is:int|min:' . ($request->getAttribute('minimum') ?? $this->getRouteArguments($request)['minimum'])
         ];
     }
 }

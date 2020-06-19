@@ -4,6 +4,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use \MadeSimple\Slim\Middleware\HttpUnprocessableEntityException;
 use \MadeSimple\Slim\Middleware\Validation;
+use Psr\Http\Message\ServerRequestInterface as Request;
 
 class UserPutValidation extends Validation
 {
@@ -18,21 +19,21 @@ class UserPutValidation extends Validation
     }
 
     /**
-     * @param array $routeArguments Route arguments
+     * @param Request $request
      *
      * @return array Rule set for the query parameters.
      */
-    protected function getQueryParameterRules(array $routeArguments): array
+    protected function getQueryParameterRules(Request $request): array
     {
         return [];
     }
 
     /**
-     * @param array $routeArguments Route arguments
+     * @param Request $request
      *
      * @return array Rule set for the parsed body.
      */
-    protected function getParsedBodyRules(array $routeArguments): array
+    protected function getParsedBodyRules(Request $request): array
     {
         return [
             'firstName' => 'required|is:string|min-str-len:1|human-name',
